@@ -1,7 +1,5 @@
-# Known Issues — Lab 02
+# Known Issues - Lab 02
 
-Ghi các lỗi còn tồn tại nếu chưa xử lý xong.
-
-| Lỗi | Ảnh hưởng | Cách xử lý dự kiến | Người phụ trách |
+| Loi / viec con thieu | Anh huong | Cach xu ly du kien | Nguoi phu trach |
 |---|---|---|---|
-|  |  |  |  |
+| Witness sign-off con trong | Chi anh huong neu GV/TA yeu cau ky xac nhan | Nho GV/TA dien witness hoac chap nhan de trong theo huong dan lop | Nhom 07 |

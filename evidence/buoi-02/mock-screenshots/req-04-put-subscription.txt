@@ -1,0 +1,15 @@
+﻿PS D:\Source\DVKN&CNNT\fit4110-lab2-a-pair07-camera-analytics> curl.exe -sS -i -X PUT http://localhost:4010/subscriptions/camera-events -H 'Authorization: Bearer test-token' -H 'Content-Type: application/json' --data-binary @C:\Users\nguye\AppData\Local\Temp\lab02-camera-subscription.json
+
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: *
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: *
+Content-type: application/json
+Content-Length: 167
+Date: Thu, 21 May 2026 01:20:55 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"consumerService":"analytics","topics":["camera.motion.detected"],"deliveryMode":"at_least_once","deadLetterTopic":"analytics.camera-events.dlq","maxRetryAttempts":0}
+

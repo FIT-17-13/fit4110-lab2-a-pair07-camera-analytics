@@ -1,38 +1,41 @@
 openapi: 3.1.0
 info:
-  title: Smart Campus — Lab 02 Contract Template
+  title: Smart Campus Camera Stream to Analytics Contract
   version: 1.0.0
   description: |
-    Hợp đồng API mẫu cho Lab 02.
-    Sinh viên cần sửa lại title, description, path, schema và example theo cặp đàm phán thực tế.
+    Contract Lab 02 cho pair-07 Camera Stream -> Analytics.
+    Camera Stream la provider, publish camera events. Analytics la consumer,
+    nhan event de thong ke motion, frame analysis va camera health.
   contact:
-    name: FIT4110 Teaching Team
-    email: fit4110@example.edu.vn
+    name: Pair 07
+    email: pair07@example.edu.vn
 servers:
   - url: http://localhost:4010
     description: Prism mock server
   - url: https://api.campus.local
-    description: Class network placeholder
+    description: Campus API placeholder
 tags:
   - name: health
-    description: Kiểm tra trạng thái service
-  - name: alerts
-    description: Quản lý cảnh báo Smart Campus
-  - name: events
-    description: Quản lý sự kiện nghiệp vụ
+    description: Kiem tra trang thai mock service
+  - name: camera-events
+    description: Event contract giua Camera Stream va Analytics
+  - name: subscriptions
+    description: Cau hinh consumer subscription
+  - name: analytics
+    description: Read model minh hoa cua Analytics
 security:
   - bearerAuth: []
 paths:
   /health:
     get:
       operationId: getHealth
-      summary: Kiểm tra trạng thái service
-      description: Endpoint kiểm tra service còn hoạt động.
+      summary: Kiem tra trang thai service
+      description: Endpoint public de kiem tra mock service con hoat dong.
       tags: [health]
       security: []
       responses:
         '200':
-          description: Service đang hoạt động
+          description: Service dang hoat dong
           content:
             application/json:
               schema:
@@ -41,203 +44,104 @@ paths:
                 ok:
                   value:
                     status: ok
-                    service: lab02-contract-template
-                    time: '2026-05-10T08:00:00Z'
+                    service: camera-analytics-contract
+                    time: '2026-05-19T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /alerts:
+  /camera-events:
     post:
-      operationId: createAlert
-      summary: Tạo cảnh báo mới
+      operationId: publishCameraEvent
+      summary: Publish camera event cho Analytics
       description: |
-        Endpoint mẫu để Provider nhận yêu cầu tạo cảnh báo từ Consumer.
-        Sinh viên cần sửa theo cặp đàm phán thực tế.
-      tags: [alerts]
+        Endpoint mock cho queue async. Trong thuc te Camera Stream publish
+        event vao broker; endpoint nay giup Lab 02 test payload bang Prism.
+      tags: [camera-events]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateAlertRequest'
+              $ref: '#/components/schemas/CameraEvent'
             examples:
-              unauthorizedAccess:
+              motionDetected:
                 value:
-                  sourceService: core-business
-                  alertType: UNAUTHORIZED_ACCESS
-                  severity: HIGH
-                  message: Phát hiện truy cập trái phép tại cổng chính
-                  relatedEventId: 0196fb3d-4ad7-7d1e-9f49-5d5148d2babc
-      responses:
-        '201':
-          description: Cảnh báo đã được tạo
-          headers:
-            Location:
-              description: URI của alert vừa tạo.
-              schema:
-                type: string
-                format: uri
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Alert'
-              examples:
-                created:
-                  value:
-                    id: 0196fb3d-4ad7-7d1e-9f49-5d5148d2babc
-                    sourceService: core-business
-                    alertType: UNAUTHORIZED_ACCESS
-                    severity: HIGH
-                    message: Phát hiện truy cập trái phép tại cổng chính
-                    relatedEventId: 0196fb3d-4ad7-7d1e-9f49-5d5148d2babc
-                    status: OPEN
-                    createdAt: '2026-05-10T08:00:00Z'
-                    resolvedAt: null
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    get:
-      operationId: listAlerts
-      summary: Lấy danh sách cảnh báo
-      description: Lấy danh sách cảnh báo với cursor-based pagination.
-      tags: [alerts]
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: Danh sách cảnh báo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AlertPage'
-              examples:
-                firstPage:
-                  value:
-                    items:
-                      - id: 0196fb3d-4ad7-7d1e-9f49-5d5148d2babc
-                        sourceService: core-business
-                        alertType: UNAUTHORIZED_ACCESS
-                        severity: HIGH
-                        message: Phát hiện truy cập trái phép tại cổng chính
-                        relatedEventId: 0196fb3d-4ad7-7d1e-9f49-5d5148d2babc
-                        status: OPEN
-                        createdAt: '2026-05-10T08:00:00Z'
-                        resolvedAt: null
-                    nextCursor: null
-                    hasMore: false
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /alerts/recent:
-    get:
-      operationId: getRecentAlerts
-      summary: Lấy các cảnh báo gần đây
-      description: Endpoint mẫu cho cặp Analytics ↔ Core Business hoặc Frontend ↔ Core Business.
-      tags: [alerts]
-      parameters:
-        - name: limit
-          in: query
-          required: false
-          description: Số cảnh báo tối đa cần lấy.
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-      responses:
-        '200':
-          description: Danh sách cảnh báo gần đây
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required: [items]
-                properties:
-                  items:
-                    type: array
-                    minItems: 0
-                    maxItems: 100
-                    items:
-                      $ref: '#/components/schemas/Alert'
-              examples:
-                recentAlerts:
-                  value:
-                    items: []
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /alerts/{alertId}:
-    get:
-      operationId: getAlertById
-      summary: Lấy chi tiết một cảnh báo
-      description: Lấy chi tiết alert theo UUID.
-      tags: [alerts]
-      parameters:
-        - $ref: '#/components/parameters/AlertId'
-      responses:
-        '200':
-          description: Chi tiết cảnh báo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Alert'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /events:
-    post:
-      operationId: createCampusEvent
-      summary: Gửi sự kiện nghiệp vụ vào hệ thống
-      description: |
-        Endpoint minh họa polymorphism. Event có thể là SensorEvent hoặc AccessEvent.
-      tags: [events]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CampusEvent'
-            examples:
-              sensorEvent:
+                  eventId: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                  eventType: camera.motion.detected
+                  occurredAt: '2026-05-19T10:00:00Z'
+                  correlationId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  source: camera-stream
+                  data:
+                    cameraId: cam-01
+                    frameId: frame-12345
+                    motionDetected: true
+                    motionConfidence: 0.91
+                    objectType: person
+                    imageRef: https://storage.campus.local/frames/frame-12345.jpg
+                    boundingBoxes:
+                      - x: 0.12
+                        y: 0.18
+                        width: 0.25
+                        height: 0.33
+                    zone: entrance
+                    location: Building A Gate
+              frameAnalyzed:
                 value:
-                  eventType: SENSOR_READING
-                  eventId: 0196fb3d-4ad7-7d1e-9f49-5d5148d2babc
-                  deviceId: SENSOR-001
-                  metric: temperature
-                  value: 38.5
-                  unit: celsius
-                  timestamp: '2026-05-10T08:00:00Z'
-              accessEvent:
+                  eventId: 6f0b0d49-26a4-46f8-93c2-1a8c9816d111
+                  eventType: camera.frame.analyzed
+                  occurredAt: '2026-05-19T10:00:05Z'
+                  correlationId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  source: camera-stream
+                  data:
+                    cameraId: cam-01
+                    frameId: frame-12345
+                    objectCount: 2
+                    detectedObjects:
+                      - type: person
+                        confidence: 0.95
+                      - type: bicycle
+                        confidence: 0.72
+                    analysisStatus: completed
+                    imageRef: https://storage.campus.local/frames/frame-12345.jpg
+                    processingTimeMs: 145
+                    model:
+                      name: yolov8-campus
+                      version: '1.0'
+              statusChanged:
                 value:
-                  eventType: ACCESS_CHECK
-                  eventId: 0196fb3d-4ad7-7d1e-9f49-5d5148d2babd
-                  gateId: GATE-01
-                  cardId: RFID-2026-001
-                  decision: ALLOW
-                  timestamp: '2026-05-10T08:01:00Z'
+                  eventId: bb2e36c9-2c41-4c65-bf56-9f64b7db7a91
+                  eventType: camera.status.changed
+                  occurredAt: '2026-05-19T10:01:00Z'
+                  correlationId: 5e4a54c7-7b2b-4e64-a57d-7d4996818a81
+                  source: camera-stream
+                  data:
+                    cameraId: cam-01
+                    status: offline
+                    reason: network_disconnect
+                    lastSeen: '2026-05-19T09:59:30Z'
+                    cpuUsage: 45.2
+                    memoryUsage: 62.1
+                    signalStrength: -75
+                    healthMetrics:
+                      uptimeSeconds: 864000
+                      frameRate: 0
+                      temperatureCelsius: 52.5
       responses:
-        '201':
-          description: Event đã được ghi nhận
+        '202':
+          description: Event da duoc chap nhan vao pipeline Analytics
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventAccepted'
+              examples:
+                accepted:
+                  value:
+                    eventId: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    status: accepted
+                    acceptedAt: '2026-05-19T10:00:01Z'
+                    duplicate: false
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -246,23 +150,159 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-webhooks:
-  alertCreated:
-    post:
-      operationId: onAlertCreated
-      summary: Webhook khi có alert mới
-      description: Provider phát sự kiện khi một cảnh báo mới được tạo.
-      tags: [alerts]
+    get:
+      operationId: listCameraEvents
+      summary: Lay danh sach camera events gan day
+      description: Read model minh hoa de Analytics kiem tra events da nhan.
+      tags: [camera-events]
+      parameters:
+        - $ref: '#/components/parameters/EventType'
+        - $ref: '#/components/parameters/CameraIdQuery'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Danh sach camera events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraEventPage'
+              examples:
+                firstPage:
+                  value:
+                    items:
+                      - eventId: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                        eventType: camera.motion.detected
+                        occurredAt: '2026-05-19T10:00:00Z'
+                        correlationId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                        source: camera-stream
+                        data:
+                          cameraId: cam-01
+                          frameId: frame-12345
+                          motionDetected: true
+                          motionConfidence: 0.91
+                          objectType: person
+                          imageRef: https://storage.campus.local/frames/frame-12345.jpg
+                          boundingBoxes: []
+                          zone: entrance
+                          location: Building A Gate
+                    nextCursor: null
+                    hasMore: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /camera-events/{eventId}:
+    get:
+      operationId: getCameraEventById
+      summary: Lay chi tiet mot camera event
+      description: Lay event theo eventId de kiem tra dedupe va trace.
+      tags: [camera-events]
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Chi tiet camera event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscriptions/camera-events:
+    put:
+      operationId: upsertCameraEventSubscription
+      summary: Khai bao subscription cua Analytics
+      description: |
+        Endpoint mock de ghi nhan Analytics subscribe cac topic camera events.
+        Lab 03 se chuyen phan nay sang AsyncAPI/broker configuration chi tiet.
+      tags: [subscriptions]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Alert'
+              $ref: '#/components/schemas/CameraEventSubscription'
+            examples:
+              analyticsSubscription:
+                value:
+                  consumerService: analytics
+                  topics:
+                    - camera.motion.detected
+                    - camera.frame.analyzed
+                    - camera.status.changed
+                  deliveryMode: at_least_once
+                  deadLetterTopic: analytics.camera-events.dlq
+                  maxRetryAttempts: 3
       responses:
         '200':
-          description: Consumer đã nhận webhook
+          description: Subscription da duoc ghi nhan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraEventSubscription'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/camera-summary:
+    get:
+      operationId: getCameraAnalyticsSummary
+      summary: Lay tong hop Analytics theo camera
+      description: Endpoint read-only de kiem tra ket qua tieu thu event.
+      tags: [analytics]
+      parameters:
+        - $ref: '#/components/parameters/CameraIdQuery'
+        - name: from
+          in: query
+          required: false
+          description: Thoi diem bat dau khoang thong ke.
+          schema:
+            type: [string, 'null']
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: Thoi diem ket thuc khoang thong ke.
+          schema:
+            type: [string, 'null']
+            format: date-time
+      responses:
+        '200':
+          description: Tong hop Analytics theo camera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraAnalyticsSummary'
+              examples:
+                summary:
+                  value:
+                    cameraId: cam-01
+                    motionEventCount: 12
+                    objectCount: 27
+                    lastStatus: online
+                    lastEventAt: '2026-05-19T10:05:00Z'
+                    abnormalEventCount: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   securitySchemes:
@@ -272,19 +312,36 @@ components:
       bearerFormat: JWT
 
   parameters:
-    AlertId:
-      name: alertId
+    EventId:
+      name: eventId
       in: path
       required: true
-      description: UUID của cảnh báo.
+      description: UUID duy nhat cua event.
       schema:
         type: string
         format: uuid
+    EventType:
+      name: eventType
+      in: query
+      required: false
+      description: Loc theo loai event.
+      schema:
+        $ref: '#/components/schemas/CameraEventType'
+    CameraIdQuery:
+      name: cameraId
+      in: query
+      required: false
+      description: Loc theo cameraId.
+      schema:
+        type: [string, 'null']
+        minLength: 3
+        maxLength: 80
+        pattern: '^cam-[A-Za-z0-9-]+$'
     Cursor:
       name: cursor
       in: query
       required: false
-      description: Cursor dùng để lấy trang tiếp theo.
+      description: Cursor dung de lay trang tiep theo.
       schema:
         type: [string, 'null']
         minLength: 1
@@ -293,12 +350,21 @@ components:
       name: limit
       in: query
       required: false
-      description: Số item tối đa mỗi trang.
+      description: So item toi da moi trang.
       schema:
         type: integer
         minimum: 1
         maximum: 100
         default: 20
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional key de provider retry cung mot publish command.
+      schema:
+        type: [string, 'null']
+        minLength: 8
+        maxLength: 120
 
   schemas:
     HealthStatus:
@@ -309,86 +375,327 @@ components:
         status:
           type: string
           enum: [ok]
-          description: Trạng thái service.
           example: ok
         service:
           type: string
           minLength: 2
           maxLength: 80
-          description: Tên service.
-          example: lab02-contract-template
+          example: camera-analytics-contract
         time:
           type: string
           format: date-time
-          description: Thời điểm kiểm tra.
-          example: '2026-05-10T08:00:00Z'
+          example: '2026-05-19T10:00:00Z'
 
-    CreateAlertRequest:
+    CameraEvent:
+      oneOf:
+        - $ref: '#/components/schemas/MotionDetectedEvent'
+        - $ref: '#/components/schemas/FrameAnalyzedEvent'
+        - $ref: '#/components/schemas/StatusChangedEvent'
+      discriminator:
+        propertyName: eventType
+        mapping:
+          camera.motion.detected: '#/components/schemas/MotionDetectedEvent'
+          camera.frame.analyzed: '#/components/schemas/FrameAnalyzedEvent'
+          camera.status.changed: '#/components/schemas/StatusChangedEvent'
+
+    CameraEventBase:
       type: object
       additionalProperties: false
-      required: [sourceService, alertType, severity, message]
+      required: [eventId, eventType, occurredAt, correlationId, source, data]
       properties:
-        sourceService:
+        eventId:
           type: string
-          minLength: 2
-          maxLength: 80
-          pattern: '^[a-z0-9-]+$'
-          description: Service tạo alert.
-          example: core-business
-        alertType:
-          type: string
-          enum: [UNAUTHORIZED_ACCESS, SENSOR_THRESHOLD_EXCEEDED, UNKNOWN_PERSON, SYSTEM_ERROR]
-          description: Loại cảnh báo.
-          example: UNAUTHORIZED_ACCESS
-        severity:
-          $ref: '#/components/schemas/AlertSeverity'
-        message:
-          type: string
-          minLength: 5
-          maxLength: 500
-          description: Nội dung cảnh báo.
-          example: Phát hiện truy cập trái phép tại cổng chính
-        relatedEventId:
-          type: [string, 'null']
           format: uuid
-          description: Event liên quan, có thể null nếu chưa có event id.
-          example: 0196fb3d-4ad7-7d1e-9f49-5d5148d2babc
+          description: UUID duy nhat de consumer dedupe.
+        eventType:
+          $ref: '#/components/schemas/CameraEventType'
+        occurredAt:
+          type: string
+          format: date-time
+          description: Thoi diem event xay ra theo ISO 8601 UTC.
+        correlationId:
+          type: string
+          format: uuid
+          description: Trace id cho luong detection end-to-end.
+        source:
+          type: string
+          const: camera-stream
+          description: Service publish event.
+        data:
+          type: object
 
-    Alert:
+    MotionDetectedEvent:
       allOf:
-        - $ref: '#/components/schemas/CreateAlertRequest'
+        - $ref: '#/components/schemas/CameraEventBase'
         - type: object
           additionalProperties: false
-          required: [id, status, createdAt, resolvedAt]
+          required: [eventId, eventType, occurredAt, correlationId, source, data]
           properties:
-            id:
+            eventId:
               type: string
               format: uuid
-              description: UUID của alert.
-              example: 0196fb3d-4ad7-7d1e-9f49-5d5148d2babc
-            status:
+            eventType:
               type: string
-              enum: [OPEN, ACKNOWLEDGED, RESOLVED]
-              description: Trạng thái xử lý alert.
-              example: OPEN
-            createdAt:
+              const: camera.motion.detected
+            occurredAt:
               type: string
               format: date-time
-              description: Thời điểm tạo alert.
-              example: '2026-05-10T08:00:00Z'
-            resolvedAt:
-              type: [string, 'null']
-              format: date-time
-              description: Thời điểm xử lý xong, null nếu chưa xử lý.
-              example: null
+            correlationId:
+              type: string
+              format: uuid
+            source:
+              type: string
+              const: camera-stream
+            data:
+              $ref: '#/components/schemas/MotionDetectedData'
 
-    AlertSeverity:
+    FrameAnalyzedEvent:
+      allOf:
+        - $ref: '#/components/schemas/CameraEventBase'
+        - type: object
+          additionalProperties: false
+          required: [eventId, eventType, occurredAt, correlationId, source, data]
+          properties:
+            eventId:
+              type: string
+              format: uuid
+            eventType:
+              type: string
+              const: camera.frame.analyzed
+            occurredAt:
+              type: string
+              format: date-time
+            correlationId:
+              type: string
+              format: uuid
+            source:
+              type: string
+              const: camera-stream
+            data:
+              $ref: '#/components/schemas/FrameAnalyzedData'
+
+    StatusChangedEvent:
+      allOf:
+        - $ref: '#/components/schemas/CameraEventBase'
+        - type: object
+          additionalProperties: false
+          required: [eventId, eventType, occurredAt, correlationId, source, data]
+          properties:
+            eventId:
+              type: string
+              format: uuid
+            eventType:
+              type: string
+              const: camera.status.changed
+            occurredAt:
+              type: string
+              format: date-time
+            correlationId:
+              type: string
+              format: uuid
+            source:
+              type: string
+              const: camera-stream
+            data:
+              $ref: '#/components/schemas/StatusChangedData'
+
+    CameraEventType:
       type: string
-      enum: [LOW, MEDIUM, HIGH, CRITICAL]
-      description: Mức độ nghiêm trọng của cảnh báo.
-      example: HIGH
+      enum:
+        - camera.motion.detected
+        - camera.frame.analyzed
+        - camera.status.changed
 
-    AlertPage:
+    MotionDetectedData:
+      type: object
+      additionalProperties: false
+      required: [cameraId, frameId, motionDetected, motionConfidence, imageRef]
+      properties:
+        cameraId:
+          $ref: '#/components/schemas/CameraId'
+        frameId:
+          type: string
+          minLength: 3
+          maxLength: 120
+          example: frame-12345
+        motionDetected:
+          type: boolean
+          example: true
+        motionConfidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.91
+        objectType:
+          type: [string, 'null']
+          enum: [person, vehicle, bicycle, unknown, null]
+          example: person
+        imageRef:
+          type: string
+          format: uri
+          description: Link toi frame image; khong gui anh binary trong payload.
+        boundingBoxes:
+          type: array
+          minItems: 0
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/BoundingBox'
+        zone:
+          type: [string, 'null']
+          maxLength: 80
+          example: entrance
+        location:
+          type: [string, 'null']
+          maxLength: 120
+          example: Building A Gate
+
+    FrameAnalyzedData:
+      type: object
+      additionalProperties: false
+      required: [cameraId, frameId, objectCount, detectedObjects, analysisStatus]
+      properties:
+        cameraId:
+          $ref: '#/components/schemas/CameraId'
+        frameId:
+          type: string
+          minLength: 3
+          maxLength: 120
+        objectCount:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        detectedObjects:
+          type: array
+          minItems: 0
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/DetectedObject'
+        analysisStatus:
+          type: string
+          enum: [completed, partial, failed]
+        imageRef:
+          type: [string, 'null']
+          format: uri
+        processingTimeMs:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 60000
+        model:
+          $ref: '#/components/schemas/ModelInfo'
+
+    StatusChangedData:
+      type: object
+      additionalProperties: false
+      required: [cameraId, status, reason, lastSeen]
+      properties:
+        cameraId:
+          $ref: '#/components/schemas/CameraId'
+        status:
+          type: string
+          enum: [online, offline, error, maintenance]
+        reason:
+          type: string
+          enum:
+            - startup
+            - heartbeat_timeout
+            - network_disconnect
+            - power_off
+            - overheat
+            - firmware_update
+            - manual_maintenance
+            - unknown
+        lastSeen:
+          type: string
+          format: date-time
+        cpuUsage:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 100
+        memoryUsage:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 100
+        signalStrength:
+          type: [number, 'null']
+          minimum: -120
+          maximum: 0
+        healthMetrics:
+          $ref: '#/components/schemas/HealthMetrics'
+
+    CameraId:
+      type: string
+      minLength: 3
+      maxLength: 80
+      pattern: '^cam-[A-Za-z0-9-]+$'
+      example: cam-01
+
+    BoundingBox:
+      type: object
+      additionalProperties: false
+      required: [x, y, width, height]
+      properties:
+        x:
+          type: number
+          minimum: 0
+          maximum: 1
+        y:
+          type: number
+          minimum: 0
+          maximum: 1
+        width:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1
+        height:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1
+
+    DetectedObject:
+      type: object
+      additionalProperties: false
+      required: [type, confidence]
+      properties:
+        type:
+          type: string
+          enum: [person, vehicle, bicycle, unknown]
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    ModelInfo:
+      type: object
+      additionalProperties: false
+      required: [name, version]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        version:
+          type: string
+          minLength: 1
+          maxLength: 40
+
+    HealthMetrics:
+      type: object
+      additionalProperties: false
+      required: [uptimeSeconds, frameRate, temperatureCelsius]
+      properties:
+        uptimeSeconds:
+          type: integer
+          minimum: 0
+        frameRate:
+          type: number
+          minimum: 0
+          maximum: 120
+        temperatureCelsius:
+          type: number
+          minimum: -20
+          maximum: 120
+
+    CameraEventPage:
       type: object
       additionalProperties: false
       required: [items, nextCursor, hasMore]
@@ -398,114 +705,89 @@ components:
           minItems: 0
           maxItems: 100
           items:
-            $ref: '#/components/schemas/Alert'
+            $ref: '#/components/schemas/CameraEvent'
         nextCursor:
           type: [string, 'null']
-          description: Cursor trang tiếp theo, null nếu hết dữ liệu.
+          maxLength: 200
           example: null
         hasMore:
           type: boolean
-          description: Còn dữ liệu ở trang sau hay không.
           example: false
-
-    CampusEvent:
-      oneOf:
-        - $ref: '#/components/schemas/SensorEvent'
-        - $ref: '#/components/schemas/AccessEvent'
-      discriminator:
-        propertyName: eventType
-        mapping:
-          SENSOR_READING: '#/components/schemas/SensorEvent'
-          ACCESS_CHECK: '#/components/schemas/AccessEvent'
-
-    SensorEvent:
-      type: object
-      additionalProperties: false
-      required: [eventType, eventId, deviceId, metric, value, unit, timestamp]
-      properties:
-        eventType:
-          type: string
-          const: SENSOR_READING
-          description: Loại event.
-          example: SENSOR_READING
-        eventId:
-          type: string
-          format: uuid
-          description: UUID của event.
-        deviceId:
-          type: string
-          pattern: '^SENSOR-[0-9]{3}$'
-          description: Mã thiết bị cảm biến.
-          example: SENSOR-001
-        metric:
-          type: string
-          enum: [temperature, humidity, smoke, motion]
-          description: Loại chỉ số cảm biến.
-          example: temperature
-        value:
-          type: number
-          minimum: -100
-          maximum: 1000
-          description: Giá trị đo được.
-          example: 38.5
-        unit:
-          type: string
-          minLength: 1
-          maxLength: 20
-          description: Đơn vị đo.
-          example: celsius
-        timestamp:
-          type: string
-          format: date-time
-          description: Thời điểm đo.
-
-    AccessEvent:
-      type: object
-      additionalProperties: false
-      required: [eventType, eventId, gateId, cardId, decision, timestamp]
-      properties:
-        eventType:
-          type: string
-          const: ACCESS_CHECK
-          description: Loại event.
-          example: ACCESS_CHECK
-        eventId:
-          type: string
-          format: uuid
-          description: UUID của event.
-        gateId:
-          type: string
-          pattern: '^GATE-[0-9]{2}$'
-          description: Mã cổng.
-          example: GATE-01
-        cardId:
-          type: string
-          pattern: '^RFID-[0-9]{4}-[0-9]{3}$'
-          description: Mã thẻ RFID.
-          example: RFID-2026-001
-        decision:
-          type: string
-          enum: [ALLOW, DENY]
-          description: Quyết định truy cập.
-          example: ALLOW
-        timestamp:
-          type: string
-          format: date-time
-          description: Thời điểm kiểm tra.
 
     EventAccepted:
       type: object
       additionalProperties: false
-      required: [eventId, acceptedAt]
+      required: [eventId, status, acceptedAt, duplicate]
       properties:
         eventId:
           type: string
           format: uuid
-          description: UUID của event được nhận.
+        status:
+          type: string
+          enum: [accepted]
         acceptedAt:
           type: string
           format: date-time
-          description: Thời điểm hệ thống ghi nhận event.
+        duplicate:
+          type: boolean
+          description: True neu event da tung duoc nhan truoc do.
+
+    CameraEventSubscription:
+      type: object
+      additionalProperties: false
+      required: [consumerService, topics, deliveryMode, deadLetterTopic, maxRetryAttempts]
+      properties:
+        consumerService:
+          type: string
+          const: analytics
+        topics:
+          type: array
+          minItems: 1
+          maxItems: 3
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/CameraEventType'
+        deliveryMode:
+          type: string
+          enum: [at_least_once]
+        deadLetterTopic:
+          type: [string, 'null']
+          minLength: 3
+          maxLength: 120
+          example: analytics.camera-events.dlq
+        maxRetryAttempts:
+          type: integer
+          minimum: 0
+          maximum: 10
+
+    CameraAnalyticsSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - cameraId
+        - motionEventCount
+        - objectCount
+        - lastStatus
+        - lastEventAt
+        - abnormalEventCount
+      properties:
+        cameraId:
+          $ref: '#/components/schemas/CameraId'
+        motionEventCount:
+          type: integer
+          minimum: 0
+        objectCount:
+          type: integer
+          minimum: 0
+        lastStatus:
+          type: [string, 'null']
+          enum: [online, offline, error, maintenance, null]
+        lastEventAt:
+          type: [string, 'null']
+          format: date-time
+        abnormalEventCount:
+          type: integer
+          minimum: 0
 
     Problem:
       type: object
@@ -515,30 +797,25 @@ components:
         type:
           type: string
           format: uri
-          description: URI định danh loại lỗi.
           example: https://campus.local/errors/validation
         title:
           type: string
           minLength: 3
           maxLength: 120
-          description: Tiêu đề lỗi ngắn gọn.
-          example: Dữ liệu không hợp lệ
+          example: Payload khong hop le
         status:
           type: integer
           minimum: 400
           maximum: 599
-          description: HTTP status code.
           example: 400
         detail:
           type: [string, 'null']
           maxLength: 500
-          description: Mô tả chi tiết lỗi.
-          example: Field cardId không đúng định dạng
+          example: Field eventType khong nam trong enum cho phep
         instance:
           type: [string, 'null']
-          format: uri
-          description: URI của request gây lỗi.
-          example: /alerts
+          format: uri-reference
+          example: /camera-events
         errors:
           type: array
           minItems: 0
@@ -551,82 +828,103 @@ components:
               field:
                 type: string
                 minLength: 1
-                maxLength: 80
-                example: cardId
+                maxLength: 120
+                example: eventType
               code:
                 type: string
                 minLength: 2
                 maxLength: 80
-                example: PATTERN_MISMATCH
+                example: ENUM_MISMATCH
               message:
                 type: string
                 minLength: 3
                 maxLength: 200
-                example: cardId phải có dạng RFID-YYYY-NNN
+                example: eventType khong hop le
 
   responses:
     BadRequest:
-      description: Dữ liệu sai định dạng
+      description: Payload sai dinh dang JSON hoac schema.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
           example:
-            type: https://campus.local/errors/validation
-            title: Dữ liệu không hợp lệ
+            type: https://campus.local/errors/bad-request
+            title: Payload khong hop le
             status: 400
-            detail: Payload không đúng JSON Schema
-            instance: /alerts
+            detail: Request body khong khop JSON Schema
+            instance: /camera-events
             errors:
-              - field: alertType
-                code: ENUM_MISMATCH
-                message: alertType không nằm trong danh sách cho phép
+              - field: eventType
+                code: REQUIRED
+                message: eventType la bat buoc
 
     Unauthorized:
-      description: Thiếu hoặc sai thông tin xác thực
+      description: Thieu hoac sai bearer token.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
           example:
             type: https://campus.local/errors/unauthorized
-            title: Chưa xác thực
+            title: Chua xac thuc
             status: 401
-            detail: Thiếu Bearer token
-            instance: /alerts/recent
+            detail: Thieu Bearer token
+            instance: /camera-events
             errors: []
 
-    Forbidden:
-      description: Không có quyền thực hiện thao tác
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-
     NotFound:
-      description: Resource không tồn tại
+      description: Resource khong ton tai.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: https://campus.local/errors/not-found
+            title: Khong tim thay
+            status: 404
+            detail: EventId khong ton tai
+            instance: /camera-events/f47ac10b-58cc-4372-a567-0e02b2c3d479
+            errors: []
 
     Conflict:
-      description: Xung đột nghiệp vụ hoặc trùng idempotency key
+      description: Event trung lap hoac xung dot idempotency.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: https://campus.local/errors/conflict
+            title: Event trung lap
+            status: 409
+            detail: eventId da duoc xu ly truoc do
+            instance: /camera-events
+            errors: []
 
     UnprocessableEntity:
-      description: Payload đúng định dạng nhưng không hợp lệ về nghiệp vụ
+      description: Payload dung schema nhung sai rang buoc nghiep vu.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: https://campus.local/errors/business-validation
+            title: Du lieu nghiep vu khong hop le
+            status: 422
+            detail: occurredAt phai la UTC va khong duoc o tuong lai qua xa
+            instance: /camera-events
+            errors: []
 
     InternalServerError:
-      description: Lỗi không mong muốn phía server
+      description: Loi server khong mong muon.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: https://campus.local/errors/internal
+            title: Loi he thong
+            status: 500
+            detail: Khong the ghi event vao pipeline
+            instance: /camera-events
+            errors: []

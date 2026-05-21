@@ -1,78 +1,77 @@
-# Phân tích yêu cầu — vai Consumer
+# Phan tich yeu cau - vai Consumer
 
-- Cặp đàm phán: pair-07 Camera Stream → Analytics
-- Product: Smart Campus
+- Cap dam phan: pair-07 Camera Stream -> Analytics
+- Product: Smart Campus Operations Platform
 - Consumer service: Analytics
 - Provider service: Camera Stream
-- Người viết: Nhóm 07
-- Ngày: 2026-05-19
+- Co che: Queue async, mo phong bang OpenAPI/Prism trong Lab 02
+- Ngay: 2026-05-19
 
 ---
 
-## 1. Tài nguyên Consumer cần nhận
+## 1. Tai nguyen Consumer can nhan
 
-| Resource | Consumer dùng để làm gì? | Trường bắt buộc | Trường tùy chọn |
+| Resource | Consumer dung de lam gi | Truong bat buoc | Truong tuy chon |
 |---|---|---|---|
-| `camera.motion.detected` | Cập nhật thống kê motion, phát hiện abnormal, trigger cảnh báo | `eventId`, `eventType`, `occurredAt`, `correlationId`, `source`, `cameraId`, `frameId`, `motionDetected`, `motionConfidence` | `objectType`, `imageRef`, `boundingBoxes`, `zone`, `location` |
-| `camera.frame.analyzed` | Cập nhật object count, health metrics của frame processing | `eventId`, `eventType`, `occurredAt`, `correlationId`, `source`, `cameraId`, `frameId`, `objectCount`, `detectedObjects`, `analysisStatus` | `imageRef`, `processingTime`, `metadata` |
-| `camera.status.changed` | Giám sát camera online/offline/error, cập nhật health dashboard | `eventId`, `eventType`, `occurredAt`, `correlationId`, `source`, `cameraId`, `status`, `reason`, `lastSeen` | `cpuUsage`, `memoryUsage`, `signalStrength`, `healthMetrics` |
+| `camera.motion.detected` | Cap nhat motion count, phat hien abnormal, trigger canh bao | `eventId`, `eventType`, `occurredAt`, `correlationId`, `source`, `data.cameraId`, `data.frameId`, `data.motionDetected`, `data.motionConfidence`, `data.imageRef` | `objectType`, `boundingBoxes`, `zone`, `location` |
+| `camera.frame.analyzed` | Cap nhat object count va ket qua model | `eventId`, `eventType`, `occurredAt`, `correlationId`, `source`, `data.cameraId`, `data.frameId`, `data.objectCount`, `data.detectedObjects`, `data.analysisStatus` | `imageRef`, `processingTimeMs`, `model` |
+| `camera.status.changed` | Giam sat camera online/offline/error va cap nhat dashboard | `eventId`, `eventType`, `occurredAt`, `correlationId`, `source`, `data.cameraId`, `data.status`, `data.reason`, `data.lastSeen` | `cpuUsage`, `memoryUsage`, `signalStrength`, `healthMetrics` |
 
 ---
 
-## 2. Hình thức nhận event
+## 2. Hinh thuc nhan event
 
-Analytics không gọi REST trực tiếp với Camera Stream. Thay vào đó, Analytics subscribe/consume các event từ broker theo cơ chế Queue async.
+Analytics khong goi truc tiep Camera Stream bang REST trong production. Analytics subscribe cac topic tu broker theo co che queue async. Trong Lab 02, endpoint `POST /camera-events` chi dung de mo phong payload va tao bang chung mock.
 
-| Mục tiêu | Topic / EventType | Kịch bản nhận | Kỳ vọng xử lý |
-|---|---|---|---|
-| Motion detected | `camera.motion.detected` | Khi Camera Stream phát hiện motion confidence vượt ngưỡng | Cập nhật thống kê, đánh giá abnormal, lưu `eventId` để dedupe |
-| Frame analyzed | `camera.frame.analyzed` | Khi frame được phân tích xong | Cập nhật object count, health metrics, lưu kết quả phân tích |
-| Status changed | `camera.status.changed` | Khi camera status hoặc health metrics thay đổi | Cập nhật dashboard trạng thái và cảnh báo nếu `offline`/`error` |
-
----
-
-## 3. Error case Consumer cần xử lý
-
-| Vấn đề | Consumer hiểu là gì? | Consumer sẽ xử lý |
+| Muc tieu | Topic / EventType | Ky vong xu ly |
 |---|---|---|
-| Payload không đúng JSON hoặc thiếu trường bắt buộc | Event malformed / invalid | Log lỗi, chuyển vào DLQ/quarantine, không xử lý |
-| Thiếu `cameraId` hoặc `eventType` | Không xác định nguồn event | Bỏ qua event, báo lỗi cho Provider |
-| `occurredAt` sai định dạng hoặc không phải UTC | Không xác định thứ tự event đúng | Log cảnh báo, yêu cầu Provider chuẩn hoá ISO 8601 UTC |
-| Event duplicate / retry | Trùng lặp event do At-least-once | Dùng `eventId` và `correlationId` để dedupe, bỏ qua event đã xử lý |
-| Thiếu `correlationId` | Không trace được luồng xử lý end-to-end | Ghi cảnh báo, dùng `cameraId` và `occurredAt` tạm thời để phân tích |
-| Giá trị `status` không hợp lệ | Dashboard hiển thị sai trạng thái | Validate enum, fallback thành `error` hoặc `unknown` |
+| Motion detected | `camera.motion.detected` | Dedupe theo `eventId`, cap nhat thong ke motion, danh gia abnormal |
+| Frame analyzed | `camera.frame.analyzed` | Luu object count, detected objects va processing metadata |
+| Status changed | `camera.status.changed` | Cap nhat trang thai camera, canh bao neu `offline` hoac `error` |
 
 ---
 
-## 4. Giả định Consumer
+## 3. Error case Consumer can xu ly
 
-- Camera Stream là Producer duy nhất cho cặp này.
-- Event chỉ gửi `imageRef`; không gửi ảnh binary trực tiếp.
-- `eventId`, `eventType`, `occurredAt`, `correlationId`, `source`, `cameraId` là bắt buộc.
-- Timestamps phải dùng ISO 8601 UTC: `YYYY-MM-DDTHH:mm:ssZ`.
-- Consumer chịu trách nhiệm xử lý duplicate và out-of-order event.
-- Nếu Provider retry event, consumer vẫn phải idempotent.
-
----
-
-## 5. Câu hỏi cho Provider
-
-1. Event `camera.motion.detected` có cần gửi `boundingBoxes` và `objectType` trong tất cả case không?
-2. Producer có gửi ảnh nhúng trong event không hay chỉ cung cấp `imageRef`?
-3. `camera.status.changed` cần bao gồm trường `healthMetrics` nào để dashboard giám sát đủ? (`cpuUsage`, `memoryUsage`, `signalStrength`, `temperature`)
-4. `correlationId` dùng để trace end-to-end hay chỉ để dedupe nội bộ?
-5. Broker có đảm bảo ordering theo `occurredAt` không?
-
----
-
-## 6. Rủi ro tích hợp và đề xuất xử lý
-
-| Rủi ro | Tác động | Đề xuất |
+| Van de | Consumer hieu la gi | Xu ly |
 |---|---|---|
-| Provider đổi tên field hoặc eventType | Consumer parse sai payload | Chốt event contract và kiểm tra schema khi deploy |
-| Payload quá lớn do ảnh nhúng | Broker timeout / OOM | Chỉ dùng `imageRef`, không gửi ảnh binary |
-| Event duplicate do retry | Thống kê motion/object count sai | Xây idempotent theo `eventId`/`correlationId` |
-| Thiếu `cameraId` | Không xác định camera | Yêu cầu `cameraId` là bắt buộc |
-| Timestamp không theo UTC | SAI thứ tự event | Chuẩn hoá ISO 8601 UTC |
-| Trạng thái không cùng enum | Dashboard hiển thị sai | Thống nhất enum `online`, `offline`, `error`, `maintenance` |
+| Payload khong dung JSON/schema | Event malformed | Reject, log loi, dua vao DLQ/quarantine |
+| Thieu `cameraId` hoac `eventType` | Khong xac dinh nguon hoac loai event | Khong xu ly nghiep vu, bao loi cho Provider |
+| `occurredAt` sai dinh dang | Khong sap xep duoc timeline | Reject hoac quarantine, yeu cau Provider chuan hoa UTC |
+| Duplicate event do retry | Co the dem lap motion/object | Bo qua neu `eventId` da xu ly |
+| Thieu `correlationId` | Kho trace luong end-to-end | Reject theo contract v1.0 vi day la field bat buoc |
+| Status/reason ngoai enum | Dashboard sai | Reject schema hoac map vao canh bao tich hop |
 
+---
+
+## 4. Gia dinh Consumer
+
+- Analytics xu ly delivery mode at-least-once va phai idempotent.
+- `eventId` la khoa dedupe chinh; `correlationId` dung cho trace va gom nhom luong.
+- Event co the den out-of-order, Analytics sap xep theo `occurredAt`.
+- Payload khong chua anh binary; Analytics chi doc `imageRef` khi can dieu tra frame.
+- `imageRef` bat buoc trong `camera.motion.detected`, nhung optional trong `camera.frame.analyzed`.
+- Lab 03 se dac ta chi tiet AsyncAPI, retry, DLQ va monitoring.
+
+---
+
+## 5. Cau hoi cho Provider
+
+1. Provider co cam ket khong doi topic/eventType trong v1.x khong?
+2. `camera.motion.detected` co luon co `imageRef` khong?
+3. `boundingBoxes` va `objectType` co the vang mat trong case motion confidence thap khong?
+4. `camera.status.changed` se publish theo heartbeat hay chi khi status thay doi?
+5. Retry policy cua Provider la bao nhieu lan va khoang cach retry nhu the nao?
+
+---
+
+## 6. Rui ro tich hop va de xuat
+
+| Rui ro | Tac dong | De xuat |
+|---|---|---|
+| Provider doi field/topic | Consumer parse sai | Versioning ro trong `VERSIONING.md` |
+| Payload thieu field bat buoc | Analytics mat du lieu | Schema validation truoc khi xu ly |
+| Duplicate do retry | Thong ke sai | Dedupe bang `eventId` |
+| Out-of-order event | Timeline sai | Sap xep theo `occurredAt`, khong dua vao arrival time |
+| Anh binary trong payload | Qua tai broker | Chi chap nhan URI `imageRef` |
+| Enum status khong thong nhat | Dashboard sai | Dung enum da chot trong OpenAPI |

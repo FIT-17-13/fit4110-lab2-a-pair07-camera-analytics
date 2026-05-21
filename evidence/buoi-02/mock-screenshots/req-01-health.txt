@@ -1,0 +1,15 @@
+﻿PS D:\Source\DVKN&CNNT\fit4110-lab2-a-pair07-camera-analytics> curl.exe -sS -i http://localhost:4010/health
+
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: *
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: *
+Content-type: application/json
+Content-Length: 83
+Date: Thu, 21 May 2026 01:20:54 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"ok","service":"camera-analytics-contract","time":"2026-05-19T10:00:00Z"}
+

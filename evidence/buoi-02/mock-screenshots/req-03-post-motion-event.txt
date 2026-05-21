@@ -1,0 +1,15 @@
+﻿PS D:\Source\DVKN&CNNT\fit4110-lab2-a-pair07-camera-analytics> curl.exe -sS -i -X POST http://localhost:4010/camera-events -H 'Authorization: Bearer test-token' -H 'Content-Type: application/json' --data-binary @C:\Users\nguye\AppData\Local\Temp\lab02-motion-event.json
+
+HTTP/1.1 202 Accepted
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: *
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: *
+Content-type: application/json
+Content-Length: 124
+Date: Thu, 21 May 2026 01:20:55 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"eventId":"f47ac10b-58cc-4372-a567-0e02b2c3d479","status":"accepted","acceptedAt":"2026-05-19T10:00:01Z","duplicate":false}
+

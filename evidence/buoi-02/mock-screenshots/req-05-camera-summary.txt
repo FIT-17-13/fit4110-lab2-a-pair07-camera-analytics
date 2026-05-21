@@ -1,0 +1,15 @@
+﻿PS D:\Source\DVKN&CNNT\fit4110-lab2-a-pair07-camera-analytics> curl.exe -sS -i 'http://localhost:4010/analytics/camera-summary?cameraId=cam-01' -H 'Authorization: Bearer test-token'
+
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: *
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: *
+Content-type: application/json
+Content-Length: 142
+Date: Thu, 21 May 2026 01:20:56 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"cameraId":"cam-01","motionEventCount":12,"objectCount":27,"lastStatus":"online","lastEventAt":"2026-05-19T10:05:00Z","abnormalEventCount":1}
+

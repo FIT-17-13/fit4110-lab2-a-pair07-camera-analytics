@@ -1,0 +1,11 @@
+﻿node --version
+v22.22.2
+
+npm --version
+10.9.7
+
+spectral --version
+6.11.1
+
+prism --version
+5.14.2

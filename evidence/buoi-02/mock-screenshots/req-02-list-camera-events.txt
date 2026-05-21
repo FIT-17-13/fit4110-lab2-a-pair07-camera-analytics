@@ -1,0 +1,15 @@
+﻿PS D:\Source\DVKN&CNNT\fit4110-lab2-a-pair07-camera-analytics> curl.exe -sS -i http://localhost:4010/camera-events -H 'Authorization: Bearer test-token'
+
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: *
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: *
+Content-type: application/json
+Content-Length: 501
+Date: Thu, 21 May 2026 01:20:55 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"items":[{"eventId":"f47ac10b-58cc-4372-a567-0e02b2c3d479","eventType":"camera.motion.detected","occurredAt":"2026-05-19T10:00:00Z","correlationId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","source":"camera-stream","data":{"cameraId":"cam-01","frameId":"frame-12345","motionDetected":true,"motionConfidence":0.91,"objectType":"person","imageRef":"https://storage.campus.local/frames/frame-12345.jpg","boundingBoxes":[],"zone":"entrance","location":"Building A Gate"}}],"nextCursor":null,"hasMore":false}
+
